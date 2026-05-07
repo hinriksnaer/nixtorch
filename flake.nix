@@ -50,14 +50,9 @@
       projects ? {},
       cudaVisibleDevices ? "",
     }: let
-      cli = pkgs.writeShellApplication {
-        name = "nixtorch";
-        runtimeInputs = with pkgs; [git gum];
-        text = builtins.readFile ./cli/nixtorch.sh;
-        excludeShellChecks = ["SC1091" "SC2016" "SC2046" "SC2086" "SC2155" "SC2206"];
-      };
+      cli = import ./cli {inherit pkgs;};
     in
-      import ./devenv/shell.nix {
+      import ./shell.nix {
         inherit pkgs projects cudaVisibleDevices cli;
         root = self;
       };

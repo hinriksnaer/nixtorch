@@ -142,14 +142,18 @@ install a nightly wheel automatically.
 ## Project layout
 
 ```
-devenv/
-  shell.nix              # dev shell entry point
-  base/cuda.nix          # CUDA toolkit + cuDNN
-  base/tooling.nix       # Python, cmake, ninja, etc.
-  projects/pytorch/      # PyTorch build config + setup script
-  projects/helion/       # Helion build config + setup script
-  projects/vllm/         # vLLM build config + setup script
-cli/nixtorch.sh          # CLI source (packaged via writeShellApplication)
+flake.nix                # flake entry point
+shell.nix                # dev shell definition
+base/
+  cuda.nix               # CUDA toolkit + cuDNN
+  tooling.nix            # Python, cmake, ninja, etc.
+projects/
+  pytorch/               # PyTorch build config + setup script
+  helion/                # Helion build config + setup script
+  vllm/                  # vLLM build config + setup script
+cli/
+  default.nix            # CLI packaging (writeShellApplication)
+  nixtorch.sh            # CLI source
 template/                # workspace template (nix flake init -t)
 ```
 

@@ -90,7 +90,7 @@ cmd_build() {
   projects=$(resolve_projects "${args[@]+"${args[@]}"}")
 
   for project in $projects; do
-    local setup="$NIXTORCH_ROOT/devenv/projects/${project}/setup.sh"
+    local setup="$NIXTORCH_ROOT/projects/${project}/setup.sh"
     local marker="$REPOS/.${project}-setup-done"
 
     if [[ ! -f "$setup" ]]; then
@@ -150,7 +150,7 @@ cmd_update() {
 
     # Rebuild if previously built
     if [[ -f "$marker" ]]; then
-      local setup="$NIXTORCH_ROOT/devenv/projects/${project}/setup.sh"
+      local setup="$NIXTORCH_ROOT/projects/${project}/setup.sh"
       if [[ -f "$setup" ]]; then
         info "$project: rebuilding..."
         rm -f "$marker"
