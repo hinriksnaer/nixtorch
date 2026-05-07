@@ -19,6 +19,8 @@ info()  { echo ":: $*"; }
 warn()  { echo "!! $*" >&2; }
 error() { echo "error: $*" >&2; exit 1; }
 
+has_gum() { command -v gum &>/dev/null; }
+
 get_repo()   { local v="${1^^}_REPO";   echo "${!v:-}"; }
 get_branch() { local v="${1^^}_BRANCH"; echo "${!v:-}"; }
 
@@ -75,6 +77,19 @@ cmd_build() {
     esac
   done
 
+  # No projects specified -- prompt with gum or build all enabled
+  if [[ ${#args[@]} -eq 0 ]]; then
+    if has_gum; then
+      local selected
+      selected=$(gum choose --no-limit --header "Select projects to build:" $(enabled_projects)) || exit 0
+      if [[ -z "$selected" ]]; then
+        info "no projects selected"
+        exit 0
+      fi
+      args=($selected)
+    fi
+  fi
+
   local projects
   projects=$(resolve_projects "${args[@]+"${args[@]}"}")
 
@@ -86,9 +101,12 @@ cmd_build() {
       error "$project: no setup script found at $setup"
     fi
 
-    # --force: remove marker so setup.sh re-runs from scratch
+    # --force: confirm then remove marker so setup.sh re-runs
     if [[ $force -eq 1 && -f "$marker" ]]; then
-      info "$project: --force specified, clearing build marker"
+      if has_gum; then
+        gum confirm "Force rebuild $project? This clears the build marker." || continue
+      fi
+      info "$project: clearing build marker"
       rm -f "$marker"
     fi
 
@@ -110,7 +128,7 @@ cmd_update() {
     branch=$(get_branch "$project")
 
     if [[ ! -d "$dir" ]]; then
-      warn "$project: not cloned, skipping (run 'nixtorch build' first)"
+      warn "$project: not cloned, skipping (run 'nixtorch build $project' first)"
       continue
     fi
 
@@ -181,6 +199,13 @@ cmd_status() {
 }
 
 cmd_clean() {
+  # Full clean (no specific projects) -- confirm first
+  if [[ $# -eq 0 ]]; then
+    if has_gum; then
+      gum confirm "Remove all project repos, build markers, and shared venv?" || exit 0
+    fi
+  fi
+
   local projects
   projects=$(resolve_projects "$@")
 
@@ -222,12 +247,12 @@ Options:
   --force, -f      Force rebuild (clear build marker before running setup)
 
 Projects are built in dependency order (pytorch first, then downstream).
-If no projects are specified, all enabled projects are built/updated/cleaned.
+If no projects are specified, an interactive selector is shown.
 Enabled projects: ${NIXTORCH_ENABLED_PROJECTS:-none}
 
 Examples:
-  nixtorch build                     # build all enabled projects from source
-  nixtorch build pytorch             # build only pytorch
+  nixtorch build pytorch             # build pytorch from source
+  nixtorch build                     # interactive project selector
   nixtorch build --force pytorch     # force rebuild pytorch from scratch
   nixtorch status                    # show environment + project state
   nixtorch update helion             # pull latest for helion

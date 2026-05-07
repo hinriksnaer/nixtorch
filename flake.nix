@@ -42,17 +42,19 @@
     # Usage from another flake:
     #   nixtorch.lib.mkDevShell {
     #     cudaVisibleDevices = "0,1";
-    #     projects.pytorch = { enable = true; cudaArch = "8.0"; };
+    #     projects.pytorch = { cudaArch = "8.0"; };
     #   };
+    # Projects are enabled by presence in the attrset.
+    # Omit a project to disable it.
     lib.mkDevShell = {
       projects ? {},
       cudaVisibleDevices ? "",
     }: let
       cli = pkgs.writeShellApplication {
         name = "nixtorch";
-        runtimeInputs = with pkgs; [git];
+        runtimeInputs = with pkgs; [git gum];
         text = builtins.readFile ./cli/nixtorch.sh;
-        excludeShellChecks = ["SC1091" "SC2086" "SC2155"];
+        excludeShellChecks = ["SC1091" "SC2046" "SC2086" "SC2155" "SC2206"];
       };
     in
       import ./devenv/shell.nix {
@@ -65,7 +67,6 @@
     devShells.${system}.default = self.lib.mkDevShell {
       projects = {
         pytorch = {
-          enable = true;
           repo = "https://github.com/pytorch/pytorch.git";
           branch = "viable/strict";
           cudaArch = "9.0";
@@ -73,19 +74,10 @@
           maxJobs = 32;
         };
         helion = {
-          enable = true;
           repo = "https://github.com/pytorch/helion.git";
           branch = "main";
           torchIndex = "nightly/cu130";
           backends = ["cute"];
-        };
-        vllm = {
-          enable = false;
-          repo = "https://github.com/vllm-project/vllm.git";
-          branch = "main";
-          cudaArch = "9.0";
-          maxJobs = 32;
-          torchIndex = "nightly/cu130";
         };
       };
     };

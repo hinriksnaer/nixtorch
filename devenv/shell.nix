@@ -43,11 +43,7 @@
   };
 
   enabledNames =
-    builtins.filter (
-      name:
-        (projects.${name} or {}).enable or false
-    )
-    projectOrder;
+    builtins.filter (name: projects ? ${name}) projectOrder;
 
   enabledModules = map (name: projectModules.${name}) enabledNames;
 
