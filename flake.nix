@@ -52,9 +52,9 @@
     }: let
       cli = pkgs.writeShellApplication {
         name = "nixtorch";
-        runtimeInputs = with pkgs; [git gum];
+        runtimeInputs = with pkgs; [git gum direnv nix-direnv];
         text = builtins.readFile ./cli/nixtorch.sh;
-        excludeShellChecks = ["SC1091" "SC2046" "SC2086" "SC2155" "SC2206"];
+        excludeShellChecks = ["SC1091" "SC2016" "SC2046" "SC2086" "SC2155" "SC2206"];
       };
     in
       import ./devenv/shell.nix {

@@ -16,6 +16,20 @@ nixtorch build pytorch
 This enters the dev shell and builds PyTorch from source into `~/workspace/`.
 First run takes a while (compiles from source). Subsequent runs are idempotent.
 
+## Entering the shell
+
+Default:
+
+```sh
+nix develop github:hinriksnaer/nixtorch
+```
+
+With a custom config (see [Configuration](#configuration)):
+
+```sh
+nix develop ~/nixtorch-config
+```
+
 ## CLI
 
 ```
@@ -23,6 +37,8 @@ nixtorch build [--force] [projects...]   # clone + build from source
 nixtorch status                          # show environment and project state
 nixtorch update                          # update nixtorch and re-enter shell
 nixtorch update <projects...>            # pull latest code and rebuild
+nixtorch customize                       # generate local config with all defaults
+nixtorch apply                           # re-enter shell with local config changes
 nixtorch clean [projects...]             # remove repos, markers, venv
 ```
 
@@ -53,15 +69,21 @@ nix develop github:hinriksnaer/nixtorch --refresh
 
 ## Configuration
 
-The default shell enables pytorch and helion. To customize, create a wrapper flake.
-Projects are enabled by being listed -- omit a project to disable it.
+The default shell enables pytorch and helion. To customize, run:
+
+```sh
+nixtorch customize
+```
+
+This generates a local config directory with a `flake.nix` containing all defaults.
+Edit the file to change settings, then run `nixtorch apply` to apply your changes.
 
 Here are all available options with their defaults:
 
 ```nix
 {
   inputs.nixtorch.url = "github:hinriksnaer/nixtorch";
-  outputs = { nixtorch, ... }: {
+  outputs = {nixtorch, ...}: {
     devShells.x86_64-linux.default = nixtorch.lib.mkDevShell {
       cudaVisibleDevices = "";  # "" = all GPUs, or e.g. "0,1"
 
@@ -117,53 +139,6 @@ CCACHE_MAXSIZE=25G  CCACHE_NOHASHDIR=true
 Helion and vLLM depend on PyTorch. If you build pytorch first, they'll use the
 locally compiled version from the shared venv. If pytorch isn't built, they'll
 install a nightly wheel automatically.
-
-## Deploying with a wrapper flake
-
-If the defaults don't work for you (different GPU arch, different projects, specific
-build flags), set up a wrapper flake:
-
-```sh
-mkdir ~/my-dev && cd ~/my-dev
-```
-
-Create `flake.nix` with your settings:
-
-```nix
-{
-  inputs.nixtorch.url = "github:hinriksnaer/nixtorch";
-  outputs = { nixtorch, ... }: {
-    devShells.x86_64-linux.default = nixtorch.lib.mkDevShell {
-      cudaVisibleDevices = "4";
-      projects.pytorch = {
-        cudaArch = "8.0";
-        maxJobs = 16;
-      };
-      projects.helion = {};
-    };
-  };
-}
-```
-
-Create `.envrc` for auto-activation on `cd`:
-
-```
-use flake
-```
-
-Then:
-
-```sh
-git init && git add -A    # flakes require a git repo
-direnv allow              # trust the .envrc (or just run: nix develop)
-nixtorch build pytorch
-```
-
-To update nixtorch to the latest version:
-
-```sh
-nix flake update
-```
 
 ## What's in the shell
 
