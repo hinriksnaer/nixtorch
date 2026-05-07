@@ -45,6 +45,12 @@ Update a project (pulls latest code, rebuilds if previously built):
 nixtorch update pytorch
 ```
 
+If you're on an older version without the `update` command:
+
+```sh
+nix develop github:hinriksnaer/nixtorch --refresh
+```
+
 ## Configuration
 
 The default shell enables pytorch and helion. To customize, create a wrapper flake.
