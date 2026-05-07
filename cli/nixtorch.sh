@@ -119,6 +119,19 @@ cmd_build() {
 }
 
 cmd_update() {
+  # No args: update nixtorch itself and re-enter the shell
+  if [[ $# -eq 0 ]]; then
+    if [[ "$NIXTORCH_ROOT" == /nix/store/* ]]; then
+      info "updating nixtorch from github..."
+      exec nix develop github:hinriksnaer/nixtorch --refresh
+    else
+      info "updating local flake at $NIXTORCH_ROOT..."
+      nix flake update --flake "$NIXTORCH_ROOT"
+      exec nix develop "$NIXTORCH_ROOT" --refresh
+    fi
+  fi
+
+  # Args given: pull latest for specified projects and rebuild if already built
   local projects
   projects=$(resolve_projects "$@")
 
@@ -126,6 +139,7 @@ cmd_update() {
     local dir="$REPOS/$project"
     local branch
     branch=$(get_branch "$project")
+    local marker="$REPOS/.${project}-setup-done"
 
     if [[ ! -d "$dir" ]]; then
       warn "$project: not cloned, skipping (run 'nixtorch build $project' first)"
@@ -137,6 +151,19 @@ cmd_update() {
     git -C "$dir" checkout "$branch"
     git -C "$dir" pull --ff-only
     git -C "$dir" submodule update --init --recursive
+
+    # Rebuild if previously built
+    if [[ -f "$marker" ]]; then
+      local setup="$NIXTORCH_ROOT/devenv/projects/${project}/setup.sh"
+      if [[ -f "$setup" ]]; then
+        info "$project: rebuilding..."
+        rm -f "$marker"
+        local start=$SECONDS
+        bash "$setup"
+        local elapsed=$(( SECONDS - start ))
+        info "$project: done ($(fmt_duration $elapsed))"
+      fi
+    fi
   done
 }
 
@@ -238,10 +265,11 @@ usage() {
 Usage: nixtorch <command> [options] [projects...]
 
 Commands:
-  build [--force]  Clone, build, and install projects from source (idempotent)
-  status           Show environment info and state of all projects
-  update           Pull latest changes for project repos
-  clean            Remove project repos and build markers (and venv if no projects specified)
+  build [--force]        Clone, build, and install projects from source (idempotent)
+  status                 Show environment info and state of all projects
+  update                 Update nixtorch itself and re-enter the shell
+  update <projects...>   Pull latest code for projects and rebuild
+  clean                  Remove project repos and build markers (and venv if no projects specified)
 
 Options:
   --force, -f      Force rebuild (clear build marker before running setup)
@@ -255,7 +283,8 @@ Examples:
   nixtorch build                     # interactive project selector
   nixtorch build --force pytorch     # force rebuild pytorch from scratch
   nixtorch status                    # show environment + project state
-  nixtorch update helion             # pull latest for helion
+  nixtorch update                    # update nixtorch and re-enter shell
+  nixtorch update helion             # pull latest helion code and rebuild
   nixtorch clean                     # remove everything (repos + markers + venv)
   nixtorch clean pytorch             # remove only pytorch repo + marker
 EOF
@@ -264,7 +293,7 @@ EOF
 # ── Main ──
 case "${1:-}" in
   build)  shift; cmd_build "$@" ;;
-  status) shift; cmd_status "$@" ;;
+  status) cmd_status ;;
   update) shift; cmd_update "$@" ;;
   clean)  shift; cmd_clean "$@" ;;
   help|--help|-h) usage ;;

@@ -21,7 +21,8 @@ First run takes a while (compiles from source). Subsequent runs are idempotent.
 ```
 nixtorch build [--force] [projects...]   # clone + build from source
 nixtorch status                          # show environment and project state
-nixtorch update [projects...]            # pull latest for project repos
+nixtorch update                          # update nixtorch and re-enter shell
+nixtorch update <projects...>            # pull latest code and rebuild
 nixtorch clean [projects...]             # remove repos, markers, venv
 ```
 
@@ -29,6 +30,20 @@ nixtorch clean [projects...]             # remove repos, markers, venv
 Projects build in dependency order: pytorch first, then helion/vllm.
 
 Running `nixtorch build` with no arguments opens an interactive project selector.
+
+## Updating
+
+Update nixtorch itself (fetches latest from GitHub, re-enters the shell):
+
+```sh
+nixtorch update
+```
+
+Update a project (pulls latest code, rebuilds if previously built):
+
+```sh
+nixtorch update pytorch
+```
 
 ## Configuration
 
