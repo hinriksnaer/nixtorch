@@ -12,11 +12,12 @@
   cli,
   projects ? {},
   cudaVisibleDevices ? "",
+  workspace ? "$HOME/workspace",
 }: let
   lib = pkgs.lib;
 
   # Workspace paths
-  repos = "$HOME/workspace";
+  repos = workspace;
   venv = "${repos}/.venv";
 
   # ── Base layers ──
@@ -56,6 +57,7 @@ in
 
       packages = [cli] ++ tooling.packages ++ cudaBase.packages ++ mergedPackages;
 
+      NIXTORCH_WORKSPACE = workspace;
       NIXTORCH_ENABLED_PROJECTS = builtins.concatStringsSep " " enabledNames;
 
       # ── Shell hook (runtime-dependent vars only) ──

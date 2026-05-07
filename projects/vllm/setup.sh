@@ -5,7 +5,7 @@
 #   https://docs.vllm.ai/en/latest/getting_started/installation/gpu/index.html
 set -euo pipefail
 
-REPOS="${REPOS:-$HOME/workspace}"
+REPOS="${NIXTORCH_WORKSPACE:-$HOME/workspace}"
 WORKSPACE="$REPOS/vllm"
 VENV="$REPOS/.venv"
 MARKER="$REPOS/.vllm-setup-done"

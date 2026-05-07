@@ -3,7 +3,7 @@
 # Config comes from settings.nix via environment variables.
 set -euo pipefail
 
-REPOS="${REPOS:-$HOME/workspace}"
+REPOS="${NIXTORCH_WORKSPACE:-$HOME/workspace}"
 WORKSPACE="$REPOS/helion"
 VENV="$REPOS/.venv"
 MARKER="$REPOS/.helion-setup-done"

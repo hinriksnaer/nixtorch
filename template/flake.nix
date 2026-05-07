@@ -3,6 +3,7 @@
   outputs = {nixtorch, ...}: {
     devShells.x86_64-linux.default = nixtorch.lib.mkDevShell {
       cudaVisibleDevices = ""; # "" = all GPUs, or e.g. "0,1"
+      workspace = "$HOME/workspace"; # where projects are cloned and built
 
       projects.pytorch = {
         repo = "https://github.com/pytorch/pytorch.git";

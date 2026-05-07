@@ -4,7 +4,7 @@
 # Follows upstream CONTRIBUTING.md install instructions.
 set -euo pipefail
 
-REPOS="${REPOS:-$HOME/workspace}"
+REPOS="${NIXTORCH_WORKSPACE:-$HOME/workspace}"
 WORKSPACE="$REPOS/pytorch"
 VENV="$REPOS/.venv"
 MARKER="$REPOS/.pytorch-setup-done"

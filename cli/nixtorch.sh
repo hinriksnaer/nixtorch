@@ -4,7 +4,7 @@
 # Build logic lives in devenv/projects/<name>/setup.sh -- this CLI
 # just orchestrates them in the correct order.
 
-REPOS="$HOME/workspace"
+REPOS="${NIXTORCH_WORKSPACE:-$HOME/workspace}"
 VENV="$REPOS/.venv"
 
 # ── Guard: refuse to run outside the dev shell ──
