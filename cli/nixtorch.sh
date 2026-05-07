@@ -81,7 +81,7 @@ cmd_build() {
   if [[ ${#args[@]} -eq 0 ]]; then
     if has_gum && [[ -t 0 ]]; then
       local selected
-      selected=$(gum choose --no-limit --header "Select projects to build:" $(enabled_projects) </dev/tty) || exit 0
+      selected=$(gum choose --no-limit --selected="*" --header "Select projects to build:" $(enabled_projects)) || exit 0
       if [[ -z "$selected" ]]; then
         info "no projects selected"
         exit 0
