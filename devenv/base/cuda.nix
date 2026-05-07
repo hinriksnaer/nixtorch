@@ -17,6 +17,8 @@ in {
   env = {
     CUDA_HOME = "${cudaToolkit}";
     CUDA_PATH = "${cudaToolkit}";
+    CUDAHOSTCXX = "${cudaGcc}/bin/g++";
+    CMAKE_CUDA_HOST_COMPILER = "${cudaGcc}/bin/g++";
     CMAKE_PREFIX_PATH = "${cudaToolkit}:${pkgs.python3}";
     CUDNN_INCLUDE_DIR = "${cudnn.include}/include";
     CUDNN_LIB_DIR = "${cudnn.lib}/lib";
