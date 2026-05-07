@@ -256,100 +256,6 @@ cmd_clean() {
   fi
 }
 
-cmd_customize() {
-  local dir
-
-  if has_gum && [[ -t 0 ]]; then
-    dir=$(gum input --value "$HOME/nixtorch-config" --header "Where to create your config?") || exit 0
-  else
-    dir="${1:-$HOME/nixtorch-config}"
-  fi
-
-  dir="${dir/#\~/$HOME}"
-
-  if [[ -f "$dir/flake.nix" ]]; then
-    if has_gum; then
-      gum confirm "Config already exists at $dir. Overwrite?" || exit 0
-    else
-      error "config already exists at $dir/flake.nix -- remove it first or choose a different path"
-    fi
-  fi
-
-  mkdir -p "$dir"
-
-  cat > "$dir/flake.nix" << 'FLAKE'
-{
-  inputs.nixtorch.url = "github:hinriksnaer/nixtorch";
-  outputs = {nixtorch, ...}: {
-    devShells.x86_64-linux.default = nixtorch.lib.mkDevShell {
-      cudaVisibleDevices = ""; # "" = all GPUs, or e.g. "0,1"
-
-      projects.pytorch = {
-        repo = "https://github.com/pytorch/pytorch.git";
-        branch = "viable/strict";
-        cudaArch = "9.0"; # e.g. "8.0", "8.0;9.0"
-        maxJobs = 32;
-        buildTests = false;
-        # env = {}; # override any pytorch build env var
-      };
-
-      projects.helion = {
-        repo = "https://github.com/pytorch/helion.git";
-        branch = "main";
-        torchIndex = "nightly/cu130";
-        backends = ["cuda"]; # add "cute" for CUTLASS
-      };
-
-      # Uncomment to enable vllm:
-      # projects.vllm = {
-      #   repo = "https://github.com/vllm-project/vllm.git";
-      #   branch = "main";
-      #   torchIndex = "nightly/cu130";
-      # };
-    };
-  };
-}
-FLAKE
-
-  echo "use flake" > "$dir/.envrc"
-  printf "result\n.direnv\n" > "$dir/.gitignore"
-
-  if [[ ! -d "$dir/.git" ]]; then
-    git -C "$dir" init -q
-  fi
-  git -C "$dir" add -A
-
-  # Set up direnv in workspace so cd ~/workspace auto-enters the shell
-  local workspace="$HOME/workspace"
-  mkdir -p "$workspace"
-  echo "use flake $dir" > "$workspace/.envrc"
-  direnv allow "$workspace/.envrc" 2>/dev/null || true
-
-  info "generated config at $dir/flake.nix"
-  info "edit the file to change settings, then run 'nixtorch apply' to apply"
-
-  # Check if direnv hook is in .bashrc
-  local bashrc="$HOME/.bashrc"
-  if [[ -f "$bashrc" ]] && ! grep -q 'direnv hook' "$bashrc" 2>/dev/null; then
-    echo ""
-    info "to auto-activate on 'cd ~/workspace', add to your .bashrc:"
-    echo '  eval "$(direnv hook bash)"'
-    echo ""
-  fi
-
-  info "entering customized shell..."
-  exec nix develop "$dir"
-}
-
-cmd_apply() {
-  if [[ "$NIXTORCH_ROOT" == /nix/store/* ]]; then
-    error "no local config to apply. Run 'nixtorch customize' first."
-  fi
-  info "applying config from $NIXTORCH_ROOT..."
-  git -C "$NIXTORCH_ROOT" add -A 2>/dev/null || true
-  exec nix develop "$NIXTORCH_ROOT"
-}
-
 usage() {
   cat <<EOF
 Usage: nixtorch <command> [options] [projects...]
@@ -359,8 +265,6 @@ Commands:
   status                 Show environment info and state of all projects
   update                 Update nixtorch itself and re-enter the shell
   update <projects...>   Pull latest code for projects and rebuild
-  customize              Generate a local config with all defaults and enter it
-  apply                  Re-enter shell with local config changes
   clean                  Remove project repos and build markers (and venv if no projects specified)
 
 Options:
@@ -377,8 +281,6 @@ Examples:
   nixtorch status                    # show environment + project state
   nixtorch update                    # update nixtorch and re-enter shell
   nixtorch update helion             # pull latest helion code and rebuild
-  nixtorch customize                 # generate local config and enter shell
-  nixtorch apply                     # apply local config changes
   nixtorch clean                     # remove everything (repos + markers + venv)
   nixtorch clean pytorch             # remove only pytorch repo + marker
 EOF
@@ -386,12 +288,10 @@ EOF
 
 # ── Main ──
 case "${1:-}" in
-  build)     shift; cmd_build "$@" ;;
-  status)    cmd_status ;;
-  update)    shift; cmd_update "$@" ;;
-  customize) cmd_customize ;;
-  apply)     cmd_apply ;;
-  clean)     shift; cmd_clean "$@" ;;
+  build)  shift; cmd_build "$@" ;;
+  status) cmd_status ;;
+  update) shift; cmd_update "$@" ;;
+  clean)  shift; cmd_clean "$@" ;;
   help|--help|-h) usage ;;
   "") usage ;;
   *) error "unknown command: $1 (try 'nixtorch help')" ;;

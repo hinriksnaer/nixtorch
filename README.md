@@ -9,26 +9,14 @@ patches needed to make GPU builds work (FindCUDAToolkit, driver lib symlinks, et
 
 ```sh
 sudo dnf install nix
-nix develop github:hinriksnaer/nixtorch
+mkdir ~/workspace && cd ~/workspace
+nix flake init -t github:hinriksnaer/nixtorch
+nix develop
 nixtorch build pytorch
 ```
 
-This enters the dev shell and builds PyTorch from source into `~/workspace/`.
-First run takes a while (compiles from source). Subsequent runs are idempotent.
-
-## Entering the shell
-
-Default:
-
-```sh
-nix develop github:hinriksnaer/nixtorch
-```
-
-With a custom config (see [Configuration](#configuration)):
-
-```sh
-nix develop ~/nixtorch-config
-```
+This sets up a workspace with a config file, enters the dev shell, and builds PyTorch
+from source into `~/workspace/`. First run takes a while. Subsequent runs are idempotent.
 
 ## CLI
 
@@ -37,8 +25,6 @@ nixtorch build [--force] [projects...]   # clone + build from source
 nixtorch status                          # show environment and project state
 nixtorch update                          # update nixtorch and re-enter shell
 nixtorch update <projects...>            # pull latest code and rebuild
-nixtorch customize                       # generate local config with all defaults
-nixtorch apply                           # re-enter shell with local config changes
 nixtorch clean [projects...]             # remove repos, markers, venv
 ```
 
@@ -46,6 +32,13 @@ nixtorch clean [projects...]             # remove repos, markers, venv
 Projects build in dependency order: pytorch first, then helion/vllm.
 
 Running `nixtorch build` with no arguments opens an interactive project selector.
+
+## Entering the shell
+
+```sh
+cd ~/workspace
+nix develop
+```
 
 ## Updating
 
@@ -69,14 +62,11 @@ nix develop github:hinriksnaer/nixtorch --refresh
 
 ## Configuration
 
-The default shell enables pytorch and helion. To customize, run:
+After running `nix flake init -t github:hinriksnaer/nixtorch`, your workspace
+has a `flake.nix` with all defaults. Edit it to change settings, then re-enter
+the shell with `nix develop`.
 
-```sh
-nixtorch customize
-```
-
-This generates a local config directory with a `flake.nix` containing all defaults.
-Edit the file to change settings, then run `nixtorch apply` to apply your changes.
+Projects are enabled by being listed -- remove a project to disable it.
 
 Here are all available options with their defaults:
 
@@ -160,6 +150,7 @@ devenv/
   projects/helion/       # Helion build config + setup script
   projects/vllm/         # vLLM build config + setup script
 cli/nixtorch.sh          # CLI source (packaged via writeShellApplication)
+template/                # workspace template (nix flake init -t)
 ```
 
 ## Requirements

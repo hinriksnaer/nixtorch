@@ -52,7 +52,7 @@
     }: let
       cli = pkgs.writeShellApplication {
         name = "nixtorch";
-        runtimeInputs = with pkgs; [git gum direnv nix-direnv];
+        runtimeInputs = with pkgs; [git gum];
         text = builtins.readFile ./cli/nixtorch.sh;
         excludeShellChecks = ["SC1091" "SC2016" "SC2046" "SC2086" "SC2155" "SC2206"];
       };
@@ -61,6 +61,18 @@
         inherit pkgs projects cudaVisibleDevices cli;
         root = self;
       };
+
+    # ── Workspace template ──
+    # nix flake init -t github:hinriksnaer/nixtorch
+    templates.default = {
+      path = ./template;
+      description = "nixtorch workspace with all defaults";
+      welcomeText = ''
+        nixtorch workspace created.
+        Edit flake.nix to change settings, then run: nix develop
+        To build pytorch: nixtorch build pytorch
+      '';
+    };
 
     # ── Default dev shell (team defaults) ──
     # nix develop github:hinriksnaer/nixtorch
