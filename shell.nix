@@ -16,10 +16,6 @@
 }: let
   lib = pkgs.lib;
 
-  # Workspace paths
-  repos = workspace;
-  venv = "${repos}/.venv";
-
   # ── Base layers ──
   tooling = import ./base/tooling.nix {inherit pkgs;};
   cudaBase = import ./base/cuda.nix {inherit pkgs;};
@@ -60,6 +56,7 @@ in
       NIXTORCH_ENABLED_PROJECTS = builtins.concatStringsSep " " enabledNames;
 
       # ── Shell hook (runtime-dependent vars only) ──
+      # workspace uses $HOME which must be expanded by bash, not Nix.
       shellHook = ''
         export NIXTORCH_ROOT="${root}"
         export NIXTORCH_WORKSPACE="${workspace}"
@@ -76,8 +73,8 @@ in
         export LD_LIBRARY_PATH="${cudaBase.libPath}:$_nv''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
         # Activate shared venv if it exists
-        if [ -f "${venv}/bin/activate" ]; then
-          source "${venv}/bin/activate"
+        if [ -f "$NIXTORCH_WORKSPACE/.venv/bin/activate" ]; then
+          source "$NIXTORCH_WORKSPACE/.venv/bin/activate"
         fi
       '';
     }
