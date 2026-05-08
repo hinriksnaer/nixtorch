@@ -82,7 +82,7 @@ Here are all available options with their defaults:
         repo = "https://github.com/pytorch/pytorch.git";
         branch = "viable/strict";
         cudaArch = "9.0";       # e.g. "8.0", "8.0;9.0"
-        maxJobs = 32;
+        maxJobs = 16;
         buildTests = false;
 
         # Override or add any PyTorch build environment variable.

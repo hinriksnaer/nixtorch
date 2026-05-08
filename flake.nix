@@ -79,7 +79,7 @@
           branch = "viable/strict";
           cudaArch = "9.0";
           buildTests = false;
-          maxJobs = 32;
+          maxJobs = 16;
         };
         helion = {
           repo = "https://github.com/pytorch/helion.git";

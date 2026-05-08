@@ -5,7 +5,7 @@
   config,
 }: let
   cudaArch = config.cudaArch or "9.0";
-  maxJobs = toString (config.maxJobs or 32);
+  maxJobs = toString (config.maxJobs or 16);
   buildTests =
     if (config.buildTests or false)
     then "1"
