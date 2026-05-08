@@ -57,12 +57,12 @@ in
 
       packages = [cli] ++ tooling.packages ++ cudaBase.packages ++ mergedPackages;
 
-      NIXTORCH_WORKSPACE = workspace;
       NIXTORCH_ENABLED_PROJECTS = builtins.concatStringsSep " " enabledNames;
 
       # ── Shell hook (runtime-dependent vars only) ──
       shellHook = ''
         export NIXTORCH_ROOT="${root}"
+        export NIXTORCH_WORKSPACE="${workspace}"
         export CCACHE_DIR="$HOME/.cache/ccache"
         ${lib.optionalString (cudaVisibleDevices != "") ''export CUDA_VISIBLE_DEVICES="${cudaVisibleDevices}"''}
 
