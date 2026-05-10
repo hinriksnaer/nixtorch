@@ -17,5 +17,6 @@
     zlib
     glibc.bin
     ccache
+    which # required by NCCL's Makefile
   ];
 }
