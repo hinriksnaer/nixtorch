@@ -2,8 +2,8 @@
 
 Nix flake that gives you a CUDA development shell for building PyTorch, Helion, and vLLM from source.
 
-Handles CUDA 12.9, cuDNN 9.13, GCC 14, Python, cmake, ninja, ccache, and all the Nix-specific
-patches needed to make GPU builds work (FindCUDAToolkit, driver lib symlinks, etc.).
+Handles CUDA (12.6-13.2, configurable), cuDNN, GCC, Python, cmake, ninja, ccache, and all the
+Nix-specific patches needed to make GPU builds work (FindCUDAToolkit, driver lib symlinks, etc.).
 
 ## Quick start
 
@@ -76,6 +76,7 @@ Here are all available options with their defaults:
   outputs = {nixtorch, ...}: {
     devShells.x86_64-linux.default = nixtorch.lib.mkDevShell {
       cudaVisibleDevices = "";  # "" = all GPUs, or e.g. "0,1"
+      # cudaVersion = "12.9"; # pin CUDA version (available: 12.6, 12.8, 12.9, 13.0, 13.1, 13.2)
       workspace = "$HOME/workspace"; # where projects are cloned and built
 
       projects.pytorch = {
