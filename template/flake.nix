@@ -3,6 +3,7 @@
   outputs = {nixtorch, ...}: {
     devShells.x86_64-linux.default = nixtorch.lib.mkDevShell {
       cudaVisibleDevices = ""; # "" = all GPUs, or e.g. "0,1"
+      # cudaVersion = "12.9"; # pin CUDA version (default: nixpkgs default)
       workspace = "$HOME/workspace"; # where projects are cloned and built
 
       projects.pytorch = {

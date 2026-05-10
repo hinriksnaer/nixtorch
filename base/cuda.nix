@@ -1,7 +1,15 @@
 # CUDA-specific packages and environment variables.
 # Provides the GPU toolchain base for all CUDA project modules.
-{pkgs}: let
-  inherit (pkgs) cudaPackages;
+# Optionally accepts a cudaVersion (e.g. "12.6", "13") to pin a specific
+# CUDA toolkit. Defaults to nixpkgs' current default when null.
+{
+  pkgs,
+  cudaVersion ? null,
+}: let
+  cudaPackages =
+    if cudaVersion != null
+    then pkgs."cudaPackages_${builtins.replaceStrings ["."] ["_"] cudaVersion}"
+    else pkgs.cudaPackages;
   cudaToolkit = cudaPackages.cudatoolkit;
   cudnn = cudaPackages.cudnn;
   cudaGcc = cudaPackages.backendStdenv.cc;

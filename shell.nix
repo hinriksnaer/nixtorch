@@ -12,13 +12,14 @@
   cli,
   projects ? {},
   cudaVisibleDevices ? "",
+  cudaVersion ? null,
   workspace ? "$HOME/workspace",
 }: let
   lib = pkgs.lib;
 
   # ── Base layers ──
   tooling = import ./base/tooling.nix {inherit pkgs;};
-  cudaBase = import ./base/cuda.nix {inherit pkgs;};
+  cudaBase = import ./base/cuda.nix {inherit pkgs cudaVersion;};
 
   # ── Per-project modules (imported only when enabled) ──
   # Build order matters: pytorch first (provides torch), then downstream.

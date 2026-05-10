@@ -49,12 +49,13 @@
     lib.mkDevShell = {
       projects ? {},
       cudaVisibleDevices ? "",
+      cudaVersion ? null,
       workspace ? "$HOME/workspace",
     }: let
       cli = import ./cli {inherit pkgs;};
     in
       import ./shell.nix {
-        inherit pkgs projects cudaVisibleDevices workspace cli;
+        inherit pkgs projects cudaVisibleDevices cudaVersion workspace cli;
         root = self;
       };
 
