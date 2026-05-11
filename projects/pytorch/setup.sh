@@ -63,6 +63,10 @@ python -m pip uninstall -y cmake ninja 2>/dev/null || true
 # Symlink cmake3 -> our Nix cmake in the venv bin so it's found first in PATH.
 ln -sf "$(command -v cmake)" "$VENV/bin/cmake3"
 
+# Clear CMake cache to ensure compiler detection uses current env vars
+# (stale cache may have clang from Helion instead of the CUDA backend GCC)
+rm -f build/CMakeCache.txt
+
 # Build and install PyTorch in editable mode (upstream recommended method)
 echo "==> Installing PyTorch in editable mode (compiles from source)..."
 echo "    MAX_JOBS=${MAX_JOBS:-auto}, TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST:-auto}"

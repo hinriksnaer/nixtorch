@@ -52,6 +52,12 @@ in
   pkgs.mkShell ({
       name = "nixtorch";
 
+      # Disable _FORTIFY_SOURCE -- glibc 2.42's fortified headers use GCC
+      # builtins (__builtin___vfprintf_chk) that nvcc doesn't support.
+      # This must be at the mkShell level because NCCL's Makefile overwrites
+      # NVCUFLAGS and doesn't read env vars for nvcc flags.
+      hardeningDisable = ["fortify"];
+
       packages = [cli] ++ tooling.packages ++ cudaBase.packages ++ mergedPackages;
 
       NIXTORCH_ENABLED_PROJECTS = builtins.concatStringsSep " " enabledNames;

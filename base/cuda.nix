@@ -40,11 +40,6 @@ in {
     CUDNN_LIBRARY_PATH = "${cudnn.lib}/lib";
     CPATH = "${cudaToolkit}/include:${cudnn.include}/include";
     LIBRARY_PATH = "${cudaToolkit}/lib";
-    # Disable _FORTIFY_SOURCE for nvcc -- glibc's fortified headers use
-    # GCC builtins (__builtin___vfprintf_chk) that nvcc doesn't support.
-    NVCC_PREPEND_FLAGS = "-U_FORTIFY_SOURCE";
-    # NVCUFLAGS is used by NCCL's Makefile for nvcc flags.
-    NVCUFLAGS = "-U_FORTIFY_SOURCE";
   };
 
   # Exposed for LD_LIBRARY_PATH construction in devshell.nix
