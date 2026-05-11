@@ -65,6 +65,7 @@ in
       # ── Shell hook (runtime-dependent vars only) ──
       # workspace uses $HOME which must be expanded by bash, not Nix.
       shellHook = ''
+        export PATH="$HOME/.local/bin''${PATH:+:$PATH}"
         export NIXTORCH_ROOT="${root}"
         export NIXTORCH_WORKSPACE="${workspace}"
         export CCACHE_DIR="$HOME/.cache/ccache"
