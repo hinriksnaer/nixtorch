@@ -19,7 +19,7 @@ in {
     cudnn
     cudnn.include
     cudnn.lib
-    cudaGcc # GCC 14 (CUDA 12.9 requires <=14)
+    cudaGcc # CUDA backend GCC (version matched to CUDA toolkit)
   ];
 
   env = {
@@ -27,6 +27,10 @@ in {
     CUDA_PATH = "${cudaToolkit}";
     CUDAHOSTCXX = "${cudaGcc}/bin/g++";
     CMAKE_CUDA_HOST_COMPILER = "${cudaGcc}/bin/g++";
+    # Use the CUDA backend GCC for CMake so clang (from Helion) doesn't
+    # get picked as the host compiler for PyTorch builds.
+    CMAKE_C_COMPILER = "${cudaGcc}/bin/gcc";
+    CMAKE_CXX_COMPILER = "${cudaGcc}/bin/g++";
     CMAKE_PREFIX_PATH = "${cudaToolkit}:${pkgs.python3}";
     CUDNN_INCLUDE_DIR = "${cudnn.include}/include";
     CUDNN_LIB_DIR = "${cudnn.lib}/lib";
@@ -34,6 +38,9 @@ in {
     CUDNN_LIBRARY_PATH = "${cudnn.lib}/lib";
     CPATH = "${cudaToolkit}/include:${cudnn.include}/include";
     LIBRARY_PATH = "${cudaToolkit}/lib";
+    # Disable _FORTIFY_SOURCE for nvcc -- glibc's fortified headers use
+    # GCC builtins (__builtin___vfprintf_chk) that nvcc doesn't support.
+    NVCC_PREPEND_FLAGS = "-U_FORTIFY_SOURCE";
   };
 
   # Exposed for LD_LIBRARY_PATH construction in devshell.nix
