@@ -14,11 +14,12 @@
     then "[${joined}]"
     else "";
 in {
-  packages = with pkgs;
-    [
-      clang_20
-    ]
-    ++ pkgs.lib.optional hasCute pkgs.cudaPackages.cutlass;
+  # NOTE: Do NOT add clang here. Helion is pure Python (hatchling build)
+  # and does not need a system clang. Adding a cc-wrapper package like
+  # clang_20 triggers Nix's setup hook which unconditionally exports
+  # CC/CXX, overriding the CUDA backend GCC and breaking PyTorch's build
+  # (tensorpipe template errors, -fclang-abi-compat=17 forwarded to GCC).
+  packages = pkgs.lib.optional hasCute pkgs.cudaPackages.cutlass;
 
   env = {
     HELION_REPO = config.repo or "https://github.com/pytorch/helion.git";

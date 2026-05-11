@@ -27,10 +27,9 @@ in {
     CUDA_PATH = "${cudaToolkit}";
     CUDAHOSTCXX = "${cudaGcc}/bin/g++";
     CMAKE_CUDA_HOST_COMPILER = "${cudaGcc}/bin/g++";
-    # Pin compilers to CUDA backend GCC for both CMake and Make.
-    # Prevents clang (from Helion) from being used as host compiler.
-    CMAKE_C_COMPILER = "${cudaGcc}/bin/gcc";
-    CMAKE_CXX_COMPILER = "${cudaGcc}/bin/g++";
+    # Pin compilers to the CUDA backend GCC for ABI compatibility.
+    # cudaGcc's cc-wrapper setup hook also sets CC/CXX, but these
+    # explicit vars serve as documentation and fallback.
     CC = "${cudaGcc}/bin/gcc";
     CXX = "${cudaGcc}/bin/g++";
     CMAKE_PREFIX_PATH = "${cudaToolkit}:${pkgs.python3}";

@@ -18,6 +18,6 @@
     glibc.bin
     ccache
     which # required by NCCL's Makefile
-    llvmPackages.openmp # omp.h for OpenMP support (needed when clang is on PATH)
+    llvmPackages.openmp # omp.h / libomp for OpenMP support
   ];
 }
