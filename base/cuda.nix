@@ -39,11 +39,18 @@ in {
     CUDNN_LIBRARY_PATH = "${cudnn.lib}/lib";
     CPATH = "${cudaToolkit}/include:${cudnn.include}/include";
     LIBRARY_PATH = "${cudaToolkit}/lib";
+    # GCC 15+ emits calls to libatomic for some atomic ops instead of
+    # inlining them. Without this, libtorch_cuda.so has undefined
+    # __atomic_store at runtime. LDFLAGS is the env var CMake reads
+    # (sets CMAKE_SHARED_LINKER_FLAGS_INIT on first configure).
+    LDFLAGS = "-latomic";
   };
 
-  # Exposed for LD_LIBRARY_PATH construction in devshell.nix
+  # Exposed for LD_LIBRARY_PATH construction in devshell.nix.
+  # Use cudaGcc's runtime libs (libstdc++, libatomic, libgomp) to match
+  # the compiler that built the code, not the default stdenv GCC.
   libPath = pkgs.lib.makeLibraryPath [
-    pkgs.stdenv.cc.cc.lib
+    cudaGcc.cc.lib
     cudaToolkit
     cudnn.lib
   ];
