@@ -78,7 +78,7 @@ in
         for _f in /usr/lib64/libcuda.so* /usr/lib64/libnvidia*.so* /usr/lib64/libnvcuvid*.so*; do
           [ -e "$_f" ] && ln -sf "$_f" "$_nv/" 2>/dev/null
         done
-        export LD_LIBRARY_PATH="${cudaBase.libPath}:$_nv''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+        export LD_LIBRARY_PATH="${cudaBase.libPath}:${pkgs.lib.makeLibraryPath [pkgs.zlib]}:$_nv''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
         # Activate shared venv if it exists
         if [ -f "$NIXTORCH_WORKSPACE/.venv/bin/activate" ]; then
