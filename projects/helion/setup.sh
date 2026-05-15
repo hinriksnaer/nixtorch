@@ -30,16 +30,28 @@ fi
 
 cd "$WORKSPACE"
 
-# Install torch if not already present (pytorch project builds from source)
-if ! python -c "import torch" 2>/dev/null; then
-    echo "==> Installing PyTorch from nightly (${HELION_TORCH_INDEX})..."
-    uv pip install --pre torch triton \
+# Install or upgrade PyTorch from the nightly index.
+# When another project (e.g. pytorch) builds torch from source, this is
+# skipped entirely.  With --force (NIXTORCH_FORCE=1), an existing pip
+# install is upgraded to the latest nightly.
+install_torch() {
+    uv pip install --pre "$@" torch triton \
         --index-url "https://download.pytorch.org/whl/${HELION_TORCH_INDEX}" \
         --extra-index-url https://pypi.org/simple
+}
+
+if ! python -c "import torch" 2>/dev/null; then
+    echo "==> Installing PyTorch from nightly (${HELION_TORCH_INDEX})..."
+    install_torch
+elif [[ "${NIXTORCH_FORCE:-0}" == "1" ]]; then
+    echo "==> Upgrading PyTorch to latest nightly (${HELION_TORCH_INDEX})..."
+    install_torch --upgrade
 else
     echo "==> PyTorch already installed ($(python -c 'import torch; print(torch.__version__)'))"
 fi
 
+# Build pip extras string: always include dev, plus any backend extras
+# (e.g. HELION_PIP_EXTRAS="[cute-cu12]" -> "dev,cute-cu12").
 EXTRAS="dev"
 if [ -n "${HELION_PIP_EXTRAS:-}" ]; then
     EXTRAS="dev,${HELION_PIP_EXTRAS#[}"

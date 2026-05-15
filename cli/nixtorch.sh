@@ -108,7 +108,7 @@ cmd_build() {
 
     info "$project: running setup"
     local start=$SECONDS
-    bash "$setup"
+    NIXTORCH_FORCE=$force bash "$setup"
     local elapsed=$(( SECONDS - start ))
     info "$project: done ($(fmt_duration $elapsed))"
   done
