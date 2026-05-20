@@ -21,17 +21,21 @@ from source into `~/workspace/`. First run takes a while. Subsequent runs are id
 ## CLI
 
 ```
-nixtorch build [--force] [projects...]   # clone + build from source
-nixtorch status                          # show environment and project state
-nixtorch update                          # update nixtorch and re-enter shell
-nixtorch update <projects...>            # pull latest code and rebuild
-nixtorch clean [projects...]             # remove repos, markers, venv
+nixtorch build [--force] [--update] [projects...]   # build/install projects
+nixtorch status                                      # show environment and project state
+nixtorch clean [projects...]                         # remove repos, markers, venv
 ```
 
-`--force` clears the build marker so setup runs again from scratch.
+`build` is idempotent: first run clones and compiles from source, subsequent
+runs re-register the editable install without recompiling C++.
+
+`--force` clears the build marker and triggers a full C++ rebuild.
+`--update` pulls latest code before building.
+
 Projects build in dependency order: pytorch first, then helion/vllm.
 
-Running `nixtorch build` with no arguments opens an interactive project selector.
+Running `nixtorch` with no arguments opens an interactive menu.
+Running `nixtorch build` with no project opens a project selector.
 
 ## Entering the shell
 
@@ -42,19 +46,13 @@ nix develop
 
 ## Updating
 
-Update nixtorch itself (fetches latest from GitHub, re-enters the shell):
+Update a project (pulls latest code, then builds/installs):
 
 ```sh
-nixtorch update
+nixtorch build --update pytorch
 ```
 
-Update a project (pulls latest code, rebuilds if previously built):
-
-```sh
-nixtorch update pytorch
-```
-
-If you're on an older version without the `update` command:
+Update nixtorch itself (fetches latest flake from GitHub, re-enters the shell):
 
 ```sh
 nix develop github:hinriksnaer/nixtorch --refresh
@@ -130,7 +128,8 @@ CCACHE_MAXSIZE=25G  CCACHE_NOHASHDIR=true
 
 Helion and vLLM depend on PyTorch. If you build pytorch first, they'll use the
 locally compiled version from the shared venv. If pytorch isn't built, they'll
-install a nightly wheel automatically.
+install a nightly wheel automatically. When building helion with `--force`, an
+interactive prompt lets you choose between local source and nightly.
 
 ## What's in the shell
 

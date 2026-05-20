@@ -66,6 +66,10 @@ ln -sf "$(command -v cmake)" "$VENV/bin/cmake3"
 # Clear CMake cache to ensure fresh compiler detection on first setup
 rm -f build/CMakeCache.txt
 
+# Clean stale data-file directories from site-packages that can shadow
+# the editable finder as a namespace package when importing from other dirs.
+rm -rf "$VENV"/lib/python*/site-packages/torch/{_inductor,csrc,share}
+
 # Build and install PyTorch in editable mode (upstream recommended method)
 echo "==> Installing PyTorch in editable mode (compiles from source)..."
 echo "    MAX_JOBS=${MAX_JOBS:-auto}, TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST:-auto}"

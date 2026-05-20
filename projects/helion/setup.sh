@@ -30,24 +30,75 @@ fi
 
 cd "$WORKSPACE"
 
-# Install or upgrade PyTorch from the nightly index.
-# When another project (e.g. pytorch) builds torch from source, this is
-# skipped entirely.  With --force (NIXTORCH_FORCE=1), an existing pip
-# install is upgraded to the latest nightly.
-install_torch() {
+# ── Torch dependency resolution ──
+
+has_gum() { command -v gum &>/dev/null; }
+
+torch_works() {
+    python -c "from torch import Tensor" &>/dev/null
+}
+
+local_pytorch_exists() {
+    [[ -d "$REPOS/pytorch/torch/__init__.py" ]]
+}
+
+install_nightly() {
+    echo "==> Installing PyTorch nightly (${HELION_TORCH_INDEX})..."
     uv pip install --pre "$@" torch triton \
         --index-url "https://download.pytorch.org/whl/${HELION_TORCH_INDEX}" \
         --extra-index-url https://pypi.org/simple
 }
 
-if ! python -c "import torch" 2>/dev/null; then
-    echo "==> Installing PyTorch from nightly (${HELION_TORCH_INDEX})..."
-    install_torch
-elif [[ "${NIXTORCH_FORCE:-0}" == "1" ]]; then
-    echo "==> Upgrading PyTorch to latest nightly (${HELION_TORCH_INDEX})..."
-    install_torch --upgrade
-else
+install_local() {
+    echo "==> Installing PyTorch from local source..."
+    rm -rf "$VENV"/lib/python*/site-packages/torch/{_inductor,csrc,share}
+    (cd "$REPOS/pytorch" && pip install --no-build-isolation -e .)
+}
+
+choose_torch_source() {
+    # Prompt only when there's a real choice (local source exists).
+    # Returns: "local" or "nightly"
+    if ! local_pytorch_exists; then
+        echo "nightly"
+        return
+    fi
+    if has_gum && [[ -t 0 ]]; then
+        local choice
+        choice=$(gum choose --header "Select PyTorch source for Helion:" \
+            "local source ($REPOS/pytorch)" \
+            "nightly (${HELION_TORCH_INDEX})") || exit 1
+        case "$choice" in
+            *local*) echo "local" ;;
+            *)       echo "nightly" ;;
+        esac
+    else
+        # Non-interactive: prefer local source if it exists
+        echo "local"
+    fi
+}
+
+if [[ "${NIXTORCH_FORCE:-0}" == "1" ]]; then
+    # --force: re-evaluate torch source, let user pick
+    local_ver=""
+    if torch_works; then
+        local_ver="$(python -c 'import torch; print(torch.__version__)' 2>/dev/null || true)"
+    fi
+    source=$(choose_torch_source)
+    case "$source" in
+        local)   install_local ;;
+        nightly) install_nightly --upgrade ;;
+    esac
+elif torch_works; then
     echo "==> PyTorch already installed ($(python -c 'import torch; print(torch.__version__)'))"
+elif local_pytorch_exists; then
+    # Torch is broken but local source exists -- offer to fix
+    source=$(choose_torch_source)
+    case "$source" in
+        local)   install_local ;;
+        nightly) install_nightly ;;
+    esac
+else
+    install_nightly
 fi
 
 # Build pip extras string: always include dev, plus any backend extras

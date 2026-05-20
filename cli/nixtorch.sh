@@ -1,7 +1,7 @@
 # nixtorch -- CLI for managing the nixtorch development environment.
 # Must be run inside the nix develop shell.
 #
-# Build logic lives in devenv/projects/<name>/setup.sh -- this CLI
+# Build logic lives in projects/<name>/setup.sh -- this CLI
 # just orchestrates them in the correct order.
 
 REPOS="${NIXTORCH_WORKSPACE:-$HOME/workspace}"
@@ -63,25 +63,72 @@ resolve_projects() {
   fi
 }
 
+choose_project() {
+  local header="${1:-Select a project:}"
+  if has_gum && [[ -t 0 ]]; then
+    gum choose --header "$header" $(enabled_projects) || exit 0
+  else
+    return 1
+  fi
+}
+
+# ── Reinstall logic (shared by build and standalone) ──
+
+reinstall_project() {
+  local project=$1
+  local dir="$REPOS/$project"
+
+  if [[ ! -d "$dir" ]]; then
+    warn "$project: not cloned, skipping (run 'nixtorch build $project' first)"
+    return 1
+  fi
+
+  case "$project" in
+    pytorch)
+      info "$project: cleaning stale site-packages"
+      rm -rf "$VENV"/lib/python*/site-packages/torch/{_inductor,csrc,share}
+      info "$project: re-registering editable install"
+      (cd "$dir" && pip install --no-build-isolation -e .)
+      ;;
+    helion)
+      local EXTRAS="dev"
+      if [ -n "${HELION_PIP_EXTRAS:-}" ]; then
+        EXTRAS="dev,${HELION_PIP_EXTRAS#[}"
+        EXTRAS="${EXTRAS%]}"
+      fi
+      info "$project: re-registering editable install (extras: $EXTRAS)"
+      (cd "$dir" && SETUPTOOLS_SCM_PRETEND_VERSION_FOR_HELION=0.0+dev \
+        uv pip install -e ".[$EXTRAS]")
+      ;;
+    vllm)
+      info "$project: re-registering editable install"
+      (cd "$dir" && uv pip install --no-build-isolation -e .)
+      ;;
+    *)
+      warn "$project: reinstall not supported"
+      return 1
+      ;;
+  esac
+}
+
 # ── Commands ──
 
 cmd_build() {
-  local force=0
+  local force=0 update=0
   local args=()
 
-  # Parse --force flag
   for arg in "$@"; do
     case "$arg" in
       --force|-f) force=1 ;;
+      --update|-u) update=1 ;;
       *) args+=("$arg") ;;
     esac
   done
 
   # No projects specified -- prompt with gum or build all enabled
   if [[ ${#args[@]} -eq 0 ]]; then
-    if has_gum && [[ -t 0 ]]; then
-      local selected
-      selected=$(gum choose --header "Select a project to build:" $(enabled_projects)) || exit 0
+    local selected
+    if selected=$(choose_project "Select a project to build:"); then
       args=("$selected")
     fi
   fi
@@ -92,73 +139,46 @@ cmd_build() {
   for project in $projects; do
     local setup="$NIXTORCH_ROOT/projects/${project}/setup.sh"
     local marker="$REPOS/.${project}-setup-done"
+    local dir="$REPOS/$project"
 
     if [[ ! -f "$setup" ]]; then
       error "$project: no setup script found at $setup"
     fi
 
-    # --force: confirm then remove marker so setup.sh re-runs
+    # --update: pull latest before building
+    if [[ $update -eq 1 && -d "$dir/.git" ]]; then
+      local branch
+      branch=$(get_branch "$project")
+      info "$project: pulling latest ($branch)"
+      git -C "$dir" fetch origin
+      git -C "$dir" checkout "$branch"
+      git -C "$dir" pull --ff-only
+      git -C "$dir" submodule update --init --recursive
+    fi
+
+    # --force: confirm then remove marker so setup.sh re-runs full build
     if [[ $force -eq 1 && -f "$marker" ]]; then
-      if has_gum; then
+      if has_gum && [[ -t 0 ]]; then
         gum confirm "Force rebuild $project? This clears the build marker." || continue
       fi
       info "$project: clearing build marker"
       rm -f "$marker"
     fi
 
-    info "$project: running setup"
-    local start=$SECONDS
-    NIXTORCH_FORCE=$force bash "$setup"
-    local elapsed=$(( SECONDS - start ))
-    info "$project: done ($(fmt_duration $elapsed))"
-  done
-}
-
-cmd_update() {
-  # No args: update nixtorch itself and re-enter the shell
-  if [[ $# -eq 0 ]]; then
-    if [[ "$NIXTORCH_ROOT" == /nix/store/* ]]; then
-      info "updating nixtorch from github..."
-      exec nix develop github:hinriksnaer/nixtorch --refresh
-    else
-      info "updating local flake at $NIXTORCH_ROOT..."
-      nix flake update --flake "$NIXTORCH_ROOT"
-      exec nix develop "$NIXTORCH_ROOT" --refresh
-    fi
-  fi
-
-  # Args given: pull latest for specified projects and rebuild if already built
-  local projects
-  projects=$(resolve_projects "$@")
-
-  for project in $projects; do
-    local dir="$REPOS/$project"
-    local branch
-    branch=$(get_branch "$project")
-    local marker="$REPOS/.${project}-setup-done"
-
-    if [[ ! -d "$dir" ]]; then
-      warn "$project: not cloned, skipping (run 'nixtorch build $project' first)"
-      continue
-    fi
-
-    info "$project: pulling latest ($branch)"
-    git -C "$dir" fetch origin
-    git -C "$dir" checkout "$branch"
-    git -C "$dir" pull --ff-only
-    git -C "$dir" submodule update --init --recursive
-
-    # Rebuild if previously built
     if [[ -f "$marker" ]]; then
-      local setup="$NIXTORCH_ROOT/projects/${project}/setup.sh"
-      if [[ -f "$setup" ]]; then
-        info "$project: rebuilding..."
-        rm -f "$marker"
-        local start=$SECONDS
-        bash "$setup"
-        local elapsed=$(( SECONDS - start ))
-        info "$project: done ($(fmt_duration $elapsed))"
-      fi
+      # Already built -- just re-register the editable install
+      info "$project: already built, re-registering editable install"
+      local start=$SECONDS
+      reinstall_project "$project"
+      local elapsed=$(( SECONDS - start ))
+      info "$project: done ($(fmt_duration $elapsed))"
+    else
+      # Not built -- run full setup
+      info "$project: running setup"
+      local start=$SECONDS
+      NIXTORCH_FORCE=$force bash "$setup"
+      local elapsed=$(( SECONDS - start ))
+      info "$project: done ($(fmt_duration $elapsed))"
     fi
   done
 }
@@ -222,15 +242,20 @@ cmd_status() {
 }
 
 cmd_clean() {
+  local args=()
+  for arg in "$@"; do
+    args+=("$arg")
+  done
+
   # Full clean (no specific projects) -- confirm first
-  if [[ $# -eq 0 ]]; then
-    if has_gum; then
+  if [[ ${#args[@]} -eq 0 ]]; then
+    if has_gum && [[ -t 0 ]]; then
       gum confirm "Remove all project repos, build markers, and shared venv?" || exit 0
     fi
   fi
 
   local projects
-  projects=$(resolve_projects "$@")
+  projects=$(resolve_projects "${args[@]+"${args[@]}"}")
 
   for project in $projects; do
     local dir="$REPOS/$project"
@@ -250,7 +275,7 @@ cmd_clean() {
   done
 
   # Clean venv only if no specific projects given (full clean)
-  if [[ $# -eq 0 && -d "$VENV" ]]; then
+  if [[ ${#args[@]} -eq 0 && -d "$VENV" ]]; then
     info "removing shared venv at $VENV"
     rm -rf "$VENV"
   fi
@@ -261,27 +286,27 @@ usage() {
 Usage: nixtorch <command> [options] [projects...]
 
 Commands:
-  build [--force]        Clone, build, and install projects from source (idempotent)
-  status                 Show environment info and state of all projects
-  update                 Update nixtorch itself and re-enter the shell
-  update <projects...>   Pull latest code for projects and rebuild
-  clean                  Remove project repos and build markers (and venv if no projects specified)
+  build [--force] [--update]   Build/install projects (idempotent)
+  status                       Show environment info and project state
+  clean [projects...]          Remove repos, markers (and venv if no project specified)
 
-Options:
-  --force, -f      Force rebuild (clear build marker before running setup)
+Flags:
+  --force, -f      Full rebuild (clear build marker, re-evaluate dependencies)
+  --update, -u     Pull latest code before building
 
-Projects are built in dependency order (pytorch first, then downstream).
-If no projects are specified, an interactive selector is shown.
+When a project is already built, 'build' re-registers the editable install
+without recompiling. Use --force for a full C++ rebuild.
+
+Running 'nixtorch' with no arguments opens an interactive menu.
 Enabled projects: ${NIXTORCH_ENABLED_PROJECTS:-none}
 
 Examples:
   nixtorch build pytorch             # build pytorch from source
   nixtorch build                     # interactive project selector
-  nixtorch build --force pytorch     # force rebuild pytorch from scratch
+  nixtorch build --force pytorch     # force full C++ rebuild
+  nixtorch build --update helion     # pull latest + build/install
   nixtorch status                    # show environment + project state
-  nixtorch update                    # update nixtorch and re-enter shell
-  nixtorch update helion             # pull latest helion code and rebuild
-  nixtorch clean                     # remove everything (repos + markers + venv)
+  nixtorch clean                     # remove everything
   nixtorch clean pytorch             # remove only pytorch repo + marker
 EOF
 }
@@ -290,9 +315,19 @@ EOF
 case "${1:-}" in
   build)  shift; cmd_build "$@" ;;
   status) cmd_status ;;
-  update) shift; cmd_update "$@" ;;
   clean)  shift; cmd_clean "$@" ;;
   help|--help|-h) usage ;;
-  "") usage ;;
+  "")
+    if has_gum && [[ -t 0 ]]; then
+      action=$(gum choose --header "nixtorch" build status clean) || exit 0
+      case "$action" in
+        build)  cmd_build ;;
+        status) cmd_status ;;
+        clean)  cmd_clean ;;
+      esac
+    else
+      usage
+    fi
+    ;;
   *) error "unknown command: $1 (try 'nixtorch help')" ;;
 esac

@@ -32,14 +32,16 @@ fi
 
 cd "$WORKSPACE"
 
-# Install torch if not already present (pytorch project builds from source)
-if ! python -c "import torch" 2>/dev/null; then
+# Install torch if not already present (pytorch project builds from source).
+# Use robust check -- "import torch" can succeed as a broken namespace package
+# when stale data files exist in site-packages.
+if python -c "from torch import Tensor" 2>/dev/null; then
+    echo "==> PyTorch already installed ($(python -c 'import torch; print(torch.__version__)'))"
+else
     echo "==> Installing PyTorch from nightly (${VLLM_TORCH_INDEX})..."
     uv pip install --pre torch triton \
         --index-url "https://download.pytorch.org/whl/${VLLM_TORCH_INDEX}" \
         --extra-index-url https://pypi.org/simple
-else
-    echo "==> PyTorch already installed ($(python -c 'import torch; print(torch.__version__)'))"
 fi
 
 # Strip torch from build requirements so the build uses the already-installed
