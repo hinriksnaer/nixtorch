@@ -63,8 +63,11 @@ python -m pip uninstall -y cmake ninja 2>/dev/null || true
 # Symlink cmake3 -> our Nix cmake in the venv bin so it's found first in PATH.
 ln -sf "$(command -v cmake)" "$VENV/bin/cmake3"
 
-# Clear CMake cache to ensure fresh compiler detection on first setup
-rm -f build/CMakeCache.txt
+# Clear CMake cache only on first setup to ensure fresh compiler detection.
+# Skip if build artifacts exist -- removing the cache forces a full rebuild.
+if [[ ! -d build/lib ]]; then
+    rm -f build/CMakeCache.txt
+fi
 
 # Clean stale data-file directories from site-packages that can shadow
 # the editable finder as a namespace package when importing from other dirs.
