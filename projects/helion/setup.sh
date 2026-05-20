@@ -44,6 +44,10 @@ local_pytorch_exists() {
 
 install_nightly() {
     echo "==> Installing PyTorch nightly (${HELION_TORCH_INDEX})..."
+    # Clean stale editable-install artifacts that shadow the nightly wheel
+    rm -rf "$VENV"/lib/python*/site-packages/torch/{_inductor,csrc,share}
+    rm -f "$VENV"/lib/python*/site-packages/__editable__*torch*
+    rm -rf "$VENV"/lib/python*/site-packages/torch-*.dist-info
     uv pip install --pre "$@" torch triton \
         --index-url "https://download.pytorch.org/whl/${HELION_TORCH_INDEX}" \
         --extra-index-url https://pypi.org/simple

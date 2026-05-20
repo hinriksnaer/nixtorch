@@ -260,16 +260,27 @@ cmd_clean() {
   for project in $projects; do
     local dir="$REPOS/$project"
     local marker="$REPOS/.${project}-setup-done"
+    local cleaned=0
 
     if [[ -d "$dir" ]]; then
       info "$project: removing $dir"
       rm -rf "$dir"
+      cleaned=1
     fi
     if [[ -f "$marker" ]]; then
       rm -f "$marker"
+      cleaned=1
     fi
 
-    if [[ ! -d "$dir" && ! -f "$marker" ]]; then
+    # Clean stale package artifacts from site-packages
+    if [[ "$project" == "pytorch" ]]; then
+      rm -rf "$VENV"/lib/python*/site-packages/torch/{_inductor,csrc,share}
+      # Remove editable install registration
+      rm -f "$VENV"/lib/python*/site-packages/__editable__*torch*
+      rm -rf "$VENV"/lib/python*/site-packages/torch-*.dist-info
+    fi
+
+    if [[ $cleaned -eq 0 ]]; then
       info "$project: nothing to clean"
     fi
   done
