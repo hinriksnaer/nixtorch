@@ -86,6 +86,13 @@ in
         done
         export LD_LIBRARY_PATH="${cudaBase.libPath}:${pkgs.lib.makeLibraryPath [pkgs.zlib]}:$_nv''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
+        # Triton bundles its own ptxas/cuobjdump but they are dynamically linked
+        # against /lib64/ld-linux which does not exist on NixOS. Point Triton at
+        # the Nix-provided CUDA toolkit binaries instead.
+        export TRITON_PTXAS_PATH="${cudaBase.env.CUDA_HOME}/bin/ptxas"
+        export TRITON_CUOBJDUMP_PATH="${cudaBase.env.CUDA_HOME}/bin/cuobjdump"
+        export TRITON_NVDISASM_PATH="${cudaBase.env.CUDA_HOME}/bin/nvdisasm"
+
         # Activate shared venv if it exists
         if [ -f "$NIXTORCH_WORKSPACE/.venv/bin/activate" ]; then
           source "$NIXTORCH_WORKSPACE/.venv/bin/activate"
