@@ -73,10 +73,16 @@ in
 
         # Symlink host NVIDIA driver libs into a clean directory so we can add
         # them to LD_LIBRARY_PATH without exposing the host glibc.
+        # Search paths:
+        #   /run/opengl-driver/lib  - NixOS (hardware.nvidia / hardware.graphics)
+        #   /usr/lib64              - Fedora, RHEL, SUSE
+        #   /usr/lib/x86_64-linux-gnu - Debian, Ubuntu
         _nv="$HOME/.cache/nixtorch/nvidia-driver-libs"
         mkdir -p "$_nv"
-        for _f in /usr/lib64/libcuda.so* /usr/lib64/libnvidia*.so* /usr/lib64/libnvcuvid*.so*; do
-          [ -e "$_f" ] && ln -sf "$_f" "$_nv/" 2>/dev/null
+        for _d in /run/opengl-driver/lib /usr/lib64 /usr/lib/x86_64-linux-gnu; do
+          for _f in "$_d"/libcuda.so* "$_d"/libnvidia*.so* "$_d"/libnvcuvid*.so*; do
+            [ -e "$_f" ] && ln -sf "$_f" "$_nv/" 2>/dev/null
+          done
         done
         export LD_LIBRARY_PATH="${cudaBase.libPath}:${pkgs.lib.makeLibraryPath [pkgs.zlib]}:$_nv''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
