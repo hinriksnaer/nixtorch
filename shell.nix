@@ -86,9 +86,13 @@ in
         done
         export LD_LIBRARY_PATH="${cudaBase.libPath}:${pkgs.lib.makeLibraryPath [pkgs.zlib]}:$_nv''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
-        # Triton bundles its own ptxas/cuobjdump but they are dynamically linked
-        # against /lib64/ld-linux which does not exist on NixOS. Point Triton at
-        # the Nix-provided CUDA toolkit binaries instead.
+        # Triton compatibility: pip-installed Triton bundles FHS-linked binaries
+        # and calls /sbin/ldconfig, neither of which work on NixOS.
+        # Use env vars that Triton already supports to bypass both issues:
+        #   - TRITON_LIBCUDA_PATH: short-circuits the /sbin/ldconfig call
+        #   - TRITON_PTXAS_PATH etc: uses nix-provided tools instead of
+        #     bundled binaries linked against /lib64/ld-linux
+        export TRITON_LIBCUDA_PATH="$_nv"
         export TRITON_PTXAS_PATH="${cudaBase.env.CUDA_HOME}/bin/ptxas"
         export TRITON_CUOBJDUMP_PATH="${cudaBase.env.CUDA_HOME}/bin/cuobjdump"
         export TRITON_NVDISASM_PATH="${cudaBase.env.CUDA_HOME}/bin/nvdisasm"
