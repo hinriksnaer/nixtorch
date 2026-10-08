@@ -2,11 +2,15 @@
 # Python, build tools, and compilation utilities.
 {pkgs}: {
   packages = with pkgs; [
-    # Python
-    python3
-    python3Packages.pip
-    python3Packages.virtualenv
-    python3Packages.debugpy # DAP adapter for neovim
+    # Python: single wrapped interpreter. Using python3Packages.* directly
+    # exports their site-packages via PYTHONPATH, which leaks python3.14
+    # packages into project virtualenvs and shadows their own packages
+    # (e.g. platformdirs' pytest plugin).
+    (python3.withPackages (ps: [
+      ps.pip
+      ps.virtualenv
+      ps.debugpy # DAP adapter for neovim
+    ]))
     uv
 
     # Build tools

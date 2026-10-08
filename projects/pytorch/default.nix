@@ -17,9 +17,6 @@ in {
     libuv
     libpng
     libjpeg
-    python3Packages.pyyaml
-    python3Packages.typing-extensions
-    python3Packages.setuptools
   ];
 
   env =

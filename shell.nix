@@ -97,6 +97,12 @@ in
         export TRITON_CUOBJDUMP_PATH="${cudaBase.env.CUDA_HOME}/bin/cuobjdump"
         export TRITON_NVDISASM_PATH="${cudaBase.env.CUDA_HOME}/bin/nvdisasm"
 
+        # Python setup hooks (python3Packages.*, withPackages envs) export
+        # PYTHONPATH, which shadows packages in project virtualenvs (e.g.
+        # platformdirs' pytest plugin fails to import). Clear it before the
+        # venv activates so venv packages win.
+        unset PYTHONPATH
+
         # Activate shared venv if it exists
         if [ -f "$NIXTORCH_WORKSPACE/.venv/bin/activate" ]; then
           source "$NIXTORCH_WORKSPACE/.venv/bin/activate"
